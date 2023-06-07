@@ -144,7 +144,7 @@ totalProfits = findBestCandidate >>> map profitFromBestCandidate >>> fromMaybe 0
 class ValidTrade a where
   validTrade :: a -> a -> Boolean
 
-infixr 1 validTrade as ??
+infix 1 validTrade as ??
 
 instance ValidTrade BuySell where
   validTrade (BuySell (Tuple _ a) (Tuple _ b)) (BuySell (Tuple _ c) (Tuple _ d)) =
