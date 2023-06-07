@@ -29,14 +29,10 @@ newtype SortedArray a = SortedArray (Array a)
 -- derive newtype instance showSortedArrayTradePair :: Show (SortedArray BuySell)
 
 instance showTradePair :: Show BuySell where
-  show (BuySell a b) = "BuySell " <> show a <> " | " <> show b
+  show (BuySell a b) = "BuySell " <> show a <> " " <> show b
 
 instance showSortedArray :: Show a => Show (SortedArray a) where
   show (SortedArray a) = "SortedArray " <> show a
-
-isValidTradeDayOrder :: BuySell -> BuySell -> Boolean
-isValidTradeDayOrder (BuySell (Tuple _ a) (Tuple _ b)) (BuySell (Tuple _ c) (Tuple _ d)) =
-  (a < b && c < d && c > b) || (c < d && a < b && d < a)
 
 bestBuySellPair :: BuySell -> SortedArray (BuySell) -> Int -> Maybe BestCandidate -> Maybe BestCandidate
 bestBuySellPair buySell (SortedArray []) maxProfitSoFar bestTradeSoFar =
@@ -45,7 +41,7 @@ bestBuySellPair buySell (SortedArray []) maxProfitSoFar bestTradeSoFar =
 bestBuySellPair buySell (SortedArray tradePairs) maxProfitSoFar bestTradeSoFar =
   case head tradePairs of
     Just h ->
-      if (isValidTradeDayOrder buySell h && (buySellProfit buySell + buySellProfit h) > maxProfitSoFar) then bestBuySellPair buySell (fromMaybe (SortedArray []) (map SortedArray $ tail tradePairs)) (buySellProfit buySell + buySellProfit h) (Just $ Tuple buySell (Just h))
+      if ((buySell ?? h) && (buySellProfit buySell + buySellProfit h) > maxProfitSoFar) then bestBuySellPair buySell (fromMaybe (SortedArray []) (map SortedArray $ tail tradePairs)) (buySellProfit buySell + buySellProfit h) (Just $ Tuple buySell (Just h))
       else bestBuySellPair buySell (fromMaybe (SortedArray []) (map SortedArray $ tail tradePairs)) maxProfitSoFar bestTradeSoFar
     Nothing ->
       if buySellProfit buySell > maxProfitSoFar then (Just $ Tuple buySell Nothing)
@@ -102,8 +98,8 @@ arrayToStockDay xs = sortStockDay $ go xs 1 []
   sortStockDay ls = SortedArray $ sortBy (\sdp1 sdp2 -> if fst sdp1 < fst sdp2 then LT else GT) ls
 
 makeBuySell :: StockDay -> StockDay -> Maybe BuySell
-makeBuySell t1@(Tuple p1 a) t2@(Tuple p2 b) =
-  if a < b && p1 < p2 then Just (BuySell t1 t2) else Nothing
+makeBuySell t1@(Tuple p1 _) t2@(Tuple p2 _) =
+  if (t1 ?? t2) && p1 < p2 then Just (BuySell t1 t2) else Nothing
 
 makeBuySellList :: StockDay -> SortedArray StockDay -> Array BuySell
 makeBuySellList sdp (SortedArray xs) = go sdp xs []
@@ -144,3 +140,15 @@ lengthSortedArray (SortedArray xs) = length xs
 
 totalProfits :: Array Int -> Int
 totalProfits = findBestCandidate >>> map profitFromBestCandidate >>> fromMaybe 0
+
+class ValidTrade a where
+  validTrade :: a -> a -> Boolean
+
+infixr 1 validTrade as ??
+
+instance ValidTrade BuySell where
+  validTrade (BuySell (Tuple _ a) (Tuple _ b)) (BuySell (Tuple _ c) (Tuple _ d)) =
+    (a < b && c < d && c > b) || (c < d && a < b && d < a)
+
+instance ValidTrade StockDay where
+  validTrade (Tuple _ d1) (Tuple _ d2) = d1 < d2
