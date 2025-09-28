@@ -7,7 +7,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Console (log)
-import Types (BestCandidate, BuySell(..), SortedArray, StockDay(..), buySellProfit, head, mkArraySorted, mkReverseSortedArray, tail, (??))
+import Types (BestCandidate, BuySell(..), SortedArray, StockDay(..), buySellProfit, getArrayFromSorted, head, mkArraySorted, mkReverseSortedArray, tail, (??))
 
 main :: Effect Unit
 main = do
@@ -67,24 +67,24 @@ makeBuySell :: StockDay -> StockDay -> Maybe BuySell
 makeBuySell t1@(StockDay p1 _) t2@(StockDay p2 _) =
   if (t1 ?? t2) && p1 < p2 then Just (BuySell t1 t2) else Nothing
 
-makeBuySellList :: StockDay -> SortedArray StockDay -> Array BuySell
+makeBuySellList :: StockDay -> Array StockDay -> Array BuySell
 makeBuySellList sdp xs = go sdp xs []
   where
-  go :: StockDay -> SortedArray StockDay -> Array BuySell -> Array BuySell
-  go _sdp ls acc = case head ls of
+  go :: StockDay -> Array StockDay -> Array BuySell -> Array BuySell
+  go _sdp ls acc = case Array.head ls of
     Just h -> case makeBuySell _sdp h of
-      Nothing -> go _sdp (fromMaybe (mkArraySorted []) $ tail ls) acc
-      Just tp -> go _sdp (fromMaybe (mkArraySorted []) $ tail ls) (Array.snoc acc tp)
+      Nothing -> go _sdp (fromMaybe ([]) $ Array.tail ls) acc
+      Just tp -> go _sdp (fromMaybe ([]) $ Array.tail ls) (Array.snoc acc tp)
     Nothing -> acc
 
 makeBuySellCombinationsList :: SortedArray StockDay -> SortedArray BuySell
-makeBuySellCombinationsList xs = mkReverseSortedArray $ go xs ([])
+makeBuySellCombinationsList xs = mkReverseSortedArray $ go (getArrayFromSorted xs) ([])
   where
-  go :: SortedArray StockDay -> Array BuySell -> Array BuySell
+  go :: Array StockDay -> Array BuySell -> Array BuySell
   go sdps tps =
-    case head sdps of
+    case Array.head sdps of
       Nothing -> tps
-      Just h -> go (fromMaybe (mkArraySorted []) $ tail sdps) (Array.concat [ tps, makeBuySellList h (fromMaybe (mkArraySorted []) $ tail sdps) ])
+      Just h -> go (fromMaybe [] $ Array.tail sdps) (Array.concat [ tps, makeBuySellList h (fromMaybe [] $ Array.tail sdps) ])
 
 arrayToBuySellList :: Array Int -> SortedArray BuySell
 arrayToBuySellList = arrayToStockDay >>> makeBuySellCombinationsList
