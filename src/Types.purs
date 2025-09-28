@@ -6,16 +6,14 @@ module Types
   , BestCandidate
   , SortedArray
   , buySellProfit
-  , mkArraySorted
-  , getArrayFromSorted
-  , lengthSortedArray
+  , toSorted
+  , fromSorted
   , mkReverseSortedArray
   , class ValidTrade
   , validTrade
   , (??)
   , head
   , tail
-  , concat
   ) where
 
 import Prelude
@@ -68,14 +66,11 @@ sortBuySell bs1 bs2 =
 buySellProfit :: BuySell -> Int
 buySellProfit (BuySell (StockDay p1 _) (StockDay p2 _)) = p2 - p1
 
-mkArraySorted :: forall a. Ord a => Array a -> SortedArray a
-mkArraySorted arr = SortedArray (Array.sort arr)
+toSorted :: forall a. Ord a => Array a -> SortedArray a
+toSorted arr = SortedArray (Array.sort arr)
 
-getArrayFromSorted :: forall a. SortedArray a -> Array a
-getArrayFromSorted (SortedArray arr) = arr
-
-lengthSortedArray :: forall a. SortedArray a -> Int
-lengthSortedArray (SortedArray xs) = Array.length xs
+fromSorted :: forall a. SortedArray a -> Array a
+fromSorted (SortedArray arr) = arr
 
 mkReverseSortedArray :: forall a. Ord a => Array a -> SortedArray a
 mkReverseSortedArray xs = SortedArray (Array.reverse $ Array.sort xs)
@@ -100,5 +95,5 @@ tail (SortedArray xs) = case Array.tail xs of
   Just ys -> Just (SortedArray ys)
   Nothing -> Nothing
 
-concat :: forall a. Ord a => SortedArray a -> SortedArray a -> SortedArray a
-concat (SortedArray xs) (SortedArray ys) = mkArraySorted (Array.concat [ xs, ys ])
+instance semigroupSortedArray :: Ord a => Semigroup (SortedArray a) where
+  append (SortedArray x) (SortedArray y) = toSorted (x <> y)

@@ -1,24 +1,18 @@
-module StockProfits where
+module StockProfits (totalProfits) where
 
 import Prelude
 
 import Data.Array as Array
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
-import Effect (Effect)
-import Effect.Console (log)
-import Types (BestCandidate, BuySell(..), SortedArray, StockDay(..), buySellProfit, getArrayFromSorted, head, mkArraySorted, mkReverseSortedArray, tail, (??))
-
-main :: Effect Unit
-main = do
-  log "🍝"
+import Types (BestCandidate, BuySell(..), SortedArray, StockDay(..), buySellProfit, fromSorted, head, toSorted, mkReverseSortedArray, tail, (??))
 
 bestBuySellPair :: BuySell -> SortedArray BuySell -> Int -> Maybe BestCandidate -> Maybe BestCandidate
 bestBuySellPair buySell tradePairs maxProfitSoFar bestTradeSoFar =
   case head tradePairs of
     Just h ->
-      if ((buySell ?? h) && (buySellProfit buySell + buySellProfit h) > maxProfitSoFar) then bestBuySellPair buySell (fromMaybe (mkArraySorted []) (tail tradePairs)) (buySellProfit buySell + buySellProfit h) (Just $ Tuple buySell (Just h))
-      else bestBuySellPair buySell (fromMaybe (mkArraySorted []) (tail tradePairs)) maxProfitSoFar bestTradeSoFar
+      if ((buySell ?? h) && (buySellProfit buySell + buySellProfit h) > maxProfitSoFar) then bestBuySellPair buySell (fromMaybe (toSorted []) (tail tradePairs)) (buySellProfit buySell + buySellProfit h) (Just $ Tuple buySell (Just h))
+      else bestBuySellPair buySell (fromMaybe (toSorted []) (tail tradePairs)) maxProfitSoFar bestTradeSoFar
     Nothing ->
       if buySellProfit buySell > maxProfitSoFar then (Just $ Tuple buySell Nothing)
       else bestTradeSoFar
@@ -39,7 +33,7 @@ workThroughStockDays tradePairs = go tradePairs 0 (Nothing)
             _, _ -> Nothing
           newMaxProfitSoFar = map candidateProfit bestCandidate # fromMaybe 0
         in
-          go (fromMaybe (mkArraySorted []) $ tail tps) newMaxProfitSoFar bestCandidate
+          go (fromMaybe (toSorted []) $ tail tps) newMaxProfitSoFar bestCandidate
       Nothing -> candidate
 
 getBestCandidate :: BestCandidate -> BestCandidate -> BestCandidate
@@ -51,7 +45,7 @@ candidateProfit (Tuple t1 Nothing) = buySellProfit t1
 candidateProfit (Tuple t1 (Just t2)) = buySellProfit t1 + buySellProfit t2
 
 arrayToStockDay :: Array Int -> SortedArray StockDay
-arrayToStockDay xs = sortStockDay $ go xs 1 []
+arrayToStockDay xs = toSorted $ go xs 1 []
   where
   go :: Array Int -> Int -> Array StockDay -> Array StockDay
   go [] _ acc = acc
@@ -59,9 +53,6 @@ arrayToStockDay xs = sortStockDay $ go xs 1 []
     case Array.head ys of
       Just stockPrice -> go (fromMaybe [] $ Array.tail ys) (day + 1) (Array.snoc acc (StockDay stockPrice day))
       Nothing -> acc
-
-  sortStockDay :: Array StockDay -> SortedArray StockDay
-  sortStockDay = mkArraySorted
 
 makeBuySell :: StockDay -> StockDay -> Maybe BuySell
 makeBuySell t1@(StockDay p1 _) t2@(StockDay p2 _) =
@@ -78,7 +69,7 @@ makeBuySellList sdp xs = go sdp xs []
     Nothing -> acc
 
 makeBuySellCombinationsList :: SortedArray StockDay -> SortedArray BuySell
-makeBuySellCombinationsList xs = mkReverseSortedArray $ go (getArrayFromSorted xs) ([])
+makeBuySellCombinationsList xs = mkReverseSortedArray $ go (fromSorted xs) ([])
   where
   go :: Array StockDay -> Array BuySell -> Array BuySell
   go sdps tps =
@@ -96,16 +87,14 @@ profitFromBestCandidate :: BestCandidate -> Int
 profitFromBestCandidate (Tuple tp1 Nothing) = buySellProfit tp1
 profitFromBestCandidate (Tuple tp1 (Just tp2)) = buySellProfit tp1 + buySellProfit tp2
 
+-- | Given an array of stock prices (where the index represents the day),
+-- | returns the maximum profit that can be achieved with at most two trades.
+-- | ```purescript
+-- | totalProfits [ 3, 1, 0, 0, 5, 4, 1, 3 ] == 7
+-- | totalProfits [ 3, 1, 0, 0, 5, 4, 1 ] == 5
+-- | totalProfits [ 3, 1, 0, 0 ] == 0
+-- | totalProfits [ 3, 1, 0, 0, 1 ] == 1
+-- | totalProfits [ 3, 1, 0, 0, 1, 2, 3 ] == 3
+-- | ```
 totalProfits :: Array Int -> Int
 totalProfits = findBestCandidate >>> map profitFromBestCandidate >>> fromMaybe 0
-
-assert :: Boolean -> Effect Unit
-assert bool = log $ if bool then "Test passed" else "Failed"
-
-runTests :: Effect Unit
-runTests = do
-  assert $ totalProfits [ 3, 1, 0, 0, 5, 4, 1, 3 ] == 7
-  assert $ totalProfits [ 3, 1, 0, 0, 5, 4, 1 ] == 5
-  assert $ totalProfits [ 3, 1, 0, 0 ] == 0
-  assert $ totalProfits [ 3, 1, 0, 0, 1 ] == 1
-  assert $ totalProfits [ 3, 1, 0, 0, 1, 2, 3 ] == 3
