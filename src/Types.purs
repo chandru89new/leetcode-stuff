@@ -32,7 +32,7 @@ data StockDay = StockDay Price Day
 
 data BuySell = BuySell (StockDay) (StockDay)
 
-data SortedArray a = SortedArray (Array a)
+newtype SortedArray a = SortedArray (Array a)
 
 type BestCandidate = Tuple BuySell (Maybe BuySell)
 
